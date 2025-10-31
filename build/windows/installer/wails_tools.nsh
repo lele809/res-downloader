@@ -56,15 +56,15 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 !endif
 
 !macro wails.checkArchitecture
-    !ifndef WAILS_WIN10_REQUIRED
-        !define WAILS_WIN10_REQUIRED "This product is only supported on Windows 10 (Server 2016) and later."
+    !ifndef WAILS_WIN7_REQUIRED
+        !define WAILS_WIN7_REQUIRED "This product is only supported on Windows 7 and later."
     !endif
 
     !ifndef WAILS_ARCHITECTURE_NOT_SUPPORTED
         !define WAILS_ARCHITECTURE_NOT_SUPPORTED "This product can't be installed on the current Windows architecture. Supports: ${ARCH}"
     !endif
 
-    ${If} ${AtLeastWin10}
+    ${If} ${AtLeastWin7}
         !ifdef SUPPORTS_AMD64
             ${if} ${IsNativeAMD64}
                 Goto ok
@@ -90,7 +90,7 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
             SetErrorLevel 64
             Abort
         notSilentWin:
-            MessageBox MB_OK "${WAILS_WIN10_REQUIRED}"
+            MessageBox MB_OK "${WAILS_WIN7_REQUIRED}"
             Quit
     ${EndIf}
 
