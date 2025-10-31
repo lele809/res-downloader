@@ -1,8 +1,9 @@
 module res-downloader
 
-go 1.22.0
+go 1.21.0
 
-toolchain go1.23.2
+// 降低 Go 版本要求以提高 Windows 7 兼容性
+// toolchain go1.23.2
 
 require (
 	github.com/elazarl/goproxy v0.0.0-20241223171911-d5978cb8c956
