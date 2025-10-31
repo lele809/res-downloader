@@ -1,0 +1,116 @@
+name: Build Windows 7 Compatible Version
+
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      version_suffix:
+        description: '版本后缀 (例如: beta, rc1)'
+        required: false
+        default: 'win7'
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**.go'
+      - '**.json'
+      - 'frontend/**'
+      - 'build/**'
+
+jobs:
+  build-win7:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install Wails
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm install
+        cd ..
+        
+    - name: Build Windows 7 Portable Version
+      run: |
+        Write-Host "开始构建 Windows 7 兼容版本..." -ForegroundColor Green
+        wails build -f -config wails_win7.json -platform "windows/amd64" -webview2 Download -skipbindings
+        
+    - name: Rename and prepare output files
+      run: |
+        $version = (Get-Content "wails_win7.json" | ConvertFrom-Json).info.productVersion
+        $suffix = "${{ github.event.inputs.version_suffix }}"
+        if (-not $suffix) { $suffix = "win7" }
+        
+        if (Test-Path "build/bin/res-downloader.exe") {
+          $newName = "res-downloader_$version`_$suffix`_portable.exe"
+          Rename-Item "build/bin/res-downloader.exe" $newName
+          Write-Host "生成文件: $newName" -ForegroundColor Green
+          
+          # 创建版本信息文件
+          $versionInfo = @{
+            version = $version
+            suffix = $suffix
+            buildTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            platform = "windows/amd64"
+            webview2 = "Download"
+            compatibility = "Windows 7 SP1+"
+          } | ConvertTo-Json -Depth 2
+          
+          $versionInfo | Out-File -FilePath "build/bin/version_info.json" -Encoding UTF8
+        } else {
+          Write-Error "构建失败：未找到生成的可执行文件"
+          exit 1
+        }
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: res-downloader-win7-portable
+        path: |
+          build/bin/res-downloader_*_portable.exe
+          build/bin/version_info.json
+        retention-days: 30
+        
+    - name: Create Release (if tagged)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build/bin/res-downloader_*_portable.exe
+          build/bin/version_info.json
+        name: Windows 7 Compatible Release ${{ github.ref_name }}
+        body: |
+          ## Windows 7 兼容版本
+          
+          ### 特性
+          - ✅ 支持 Windows 7 SP1 及以上系统
+          - ✅ 便携版，无需安装
+          - ✅ WebView2 自动下载模式
+          - ✅ 完整功能支持
+          
+          ### 系统要求
+          - Windows 7 SP1 x64 或更高版本
+          - 首次运行需要网络连接（下载 WebView2）
+          
+          ### 使用方法
+          1. 下载 `res-downloader_*_portable.exe`
+          2. 直接运行（可能需要管理员权限）
+          3. 首次运行会自动下载 WebView2 Runtime
+          
+          构建时间: ${{ steps.build_info.outputs.build_time }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
