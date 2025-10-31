@@ -45,11 +45,11 @@ jobs:
     - name: Build Windows 7 Portable Version
       run: |
         Write-Host "开始构建 Windows 7 兼容版本..." -ForegroundColor Green
-        wails build -f -config wails_win7.json -platform "windows/amd64" -webview2 Download -skipbindings
+        wails build -f -platform "windows/amd64" -webview2 Download -skipbindings
         
     - name: Rename and prepare output files
       run: |
-        $version = (Get-Content "wails_win7.json" | ConvertFrom-Json).info.productVersion
+        $version = (Get-Content "wails.json" | ConvertFrom-Json).info.productVersion
         $suffix = "${{ github.event.inputs.version_suffix }}"
         if (-not $suffix) { $suffix = "win7" }
         
